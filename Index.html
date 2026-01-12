@@ -1,0 +1,368 @@
+!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Multi-Page Data Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body { font-family: system-ui, sans-serif; margin:0; padding:0; }
+.tabs { display:flex; flex-wrap: wrap; border-bottom:1px solid #ccc; overflow-x:auto; }
+.tab-button { padding:6px 12px; cursor:pointer; border:none; background:#f2f2f2; white-space:nowrap; font-size:14px; }
+.tab-button.active { background:#ddd; font-weight:bold; }
+.sheet { display:none; padding:8px; }
+.sheet.active { display:block; }
+table { border-collapse:collapse; width:100%; font-size:12px; }
+th,td { border:1px solid #ccc; padding:4px; }
+th { background:#eee; position:sticky; top:0; }
+input[type="text"] { width:100%; box-sizing:border-box; font-size:12px; }
+.controls { margin-bottom:8px; display:flex; gap:4px; flex-wrap:wrap; }
+a { color:blue; text-decoration:underline; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<div class="tabs"></div>
+<div class="sheet active">
+  <div class="controls">
+  
+  </div>
+  <div id="page-container"></div>
+</div>
+       <script>
+       function deletePage(pageNumber) {
+  if (pageNumber < 0 || pageNumber >= pages.length) {
+    alert("Invalid page number");
+    return;
+  }
+
+  // Remove page
+  pages.splice(pageNumber, 1);
+
+  // Reindex page IDs
+  pages.forEach((page, index) => {
+    page.pageId = index;
+  });
+
+  console.log("Page deleted. Updated pages:", pages);
+}
+       </script>
+
+       <script>
+       function deletePageByName(pageName) {
+  const index = pages.findIndex(p => p.name === pageName);
+
+  if (index === -1) {
+    alert("Page not found");
+    return;
+  }
+
+  pages.splice(index, 1);
+
+  pages.forEach((page, i) => {
+    page.pageId = i;
+  });
+
+  console.log(`Page "${pageName}" deleted`);
+}
+       </script>
+       <script>
+       function confirmDeletePage(pageNumber) {
+  if (confirm(`Delete page ${pageNumber}? This cannot be undone.`)) {
+    deletePage(pageNumber);
+  }
+}
+       </script>
+       
+       <script>
+       function confirmDeletePage(pageNumber) {
+  if (confirm(`Delete page ${pageNumber}? This cannot be undone.`)) {
+    deletePage(pageNumber);
+  }
+}
+       </script>
+       <script>
+       function confirmDeleteAllPages(){
+  if(!confirm("DELETE ALL PAGES?\nThis cannot be undone.")) return;
+
+  pages.length = 0;
+  savePages();
+
+  createPage("Page 1");
+  currentPageIndex = 0;
+  renderTabs();
+  showPage(0);
+
+  console.log("All pages deleted and reset");
+}
+       </script>
+       <script>
+       function deletePageAndRows(pageNumber) {
+  deletePage(pageNumber);
+
+  // If you have a global row map:
+  rows = rows.filter(row => row.page !== pageNumber);
+}
+       </script>
+       
+       <script>
+/* ---------------- SETTINGS ---------------- */
+const MAX_COLUMNS = 50;
+const MAX_PAGES = 50;
+let pages = JSON.parse(localStorage.getItem('pages')) || [];
+let currentPageIndex = 0;
+
+/* ---------------- PAGE MANAGEMENT ---------------- */
+function createPage(name) {
+  if (pages.length >= MAX_PAGES) return alert("Max pages reached");
+  const page = { id:'page'+Date.now(), name:name||`Page ${pages.length+1}`, columns:[], rows:[] };
+  pages.push(page);
+  savePages();
+  renderTabs();
+  showPage(pages.length-1);
+}
+
+function savePages(){ localStorage.setItem('pages', JSON.stringify(pages)); }
+
+/* ---------------- TABS ---------------- */
+function renderTabs() {
+  const tabBar = document.querySelector('.tabs');
+  tabBar.innerHTML = '';
+  pages.forEach((p,i)=>{
+    const btn=document.createElement('button');
+    btn.className='tab-button'+(i===currentPageIndex?' active':'');
+    btn.textContent=p.name;
+    btn.onclick=()=>showPage(i);
+    tabBar.appendChild(btn);
+  });
+}
+
+/* ---------------- SHOW PAGE ---------------- */
+function showPage(index){
+  if(!pages[index]) return;
+  currentPageIndex=index;
+  renderTabs();
+  const container=document.getElementById('page-container');
+  container.innerHTML='';
+  const page=pages[index];
+
+  const table=document.createElement('table');
+  const thead=document.createElement('thead');
+  const trHead=document.createElement('tr');
+  page.columns.slice(0,MAX_COLUMNS).forEach(c=>{
+    const th=document.createElement('th'); th.textContent=c; trHead.appendChild(th);
+  });
+  thead.appendChild(trHead);
+  const tbody=document.createElement('tbody');
+  page.rows.forEach(row=>{
+    const tr=document.createElement('tr');
+    row.slice(0,MAX_COLUMNS).forEach(cell=>{
+      const td=document.createElement('td');
+      td.innerHTML=renderCell(cell);
+      // Enable editing
+      td.ondblclick=()=>editCell(td, cell, index);
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.append(thead, tbody);
+  container.appendChild(table);
+}
+
+/* ---------------- EDIT CELL ---------------- */
+function editCell(td, cell, pageIdx){
+  const oldValue=cell.value;
+  td.innerHTML='';
+  const input=document.createElement('input'); input.type='text'; input.value=oldValue;
+  td.appendChild(input); input.focus();
+  input.onblur=()=>{cell.value=input.value; td.innerHTML=renderCell(cell); savePages();}
+  input.onkeydown=e=>{if(e.key==='Enter') input.blur();}
+}
+
+/* ---------------- RENDER CELL ---------------- */
+function renderCell(cell){
+  if(!cell) return '';
+  if(cell.link) return `<a onclick="jumpToPage(${cell.link.page},${cell.link.row})">${cell.value}</a>`;
+  return cell.value;
+}
+
+/* ---------------- JUMP TO PAGE ---------------- */
+function jumpToPage(pageIdx,rowIdx){
+  if(!pages[pageIdx]) return;
+  showPage(pageIdx);
+  setTimeout(()=>{
+    const tbody=document.querySelector('.sheet table tbody');
+    if(!tbody) return;
+    const rows=tbody.querySelectorAll('tr');
+    if(rows[rowIdx]){
+      rows[rowIdx].scrollIntoView({behavior:'smooth',block:'center'});
+      rows[rowIdx].style.background='#ffff99';
+      setTimeout(()=>rows[rowIdx].style.background='',1500);
+    }
+  },100);
+}
+
+/* ---------------- FILTER ---------------- */
+function filterCurrentPage(q){
+  const table=document.querySelector('.sheet table');
+  if(!table) return;
+  const rows=table.querySelectorAll('tbody tr');
+  q=q.toLowerCase();
+  rows.forEach(r=>r.style.display=r.textContent.toLowerCase().includes(q)?'':'none');
+}
+
+/* ---------------- CLEAR PAGE ---------------- */
+function clearCurrentPage(){
+  if(confirm('Clear this page?')){
+    pages[currentPageIndex].rows=[];
+    pages[currentPageIndex].columns=[];
+    savePages();
+    showPage(currentPageIndex);
+  }
+}
+
+/* ---------------- CSV EXPORT ---------------- */
+function exportCurrentPageCSV(){
+  const page=pages[currentPageIndex];
+  if(!page) return;
+  const rows=[page.columns.slice(0,MAX_COLUMNS).join(',')];
+  page.rows.forEach(r=>{
+    rows.push(r.slice(0,MAX_COLUMNS).map(c=>c.value.replace(/"/g,'""')).join(','));
+  });
+  const blob=new Blob([rows.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=page.name+'.csv'; a.click();
+}
+
+/* ---------------- MULTI-PAGE PASTE WITH LINKS ---------------- */
+function pasteMultiPageData(text){
+  text=text.trim();
+  if(!text) return;
+  const rows=text.split(/\r?\n/).filter(Boolean);
+  let startPage=currentPageIndex;
+
+  rows.forEach(rowText=>{
+    let columns=rowText.split(/\t|,/).map(v=>v.trim());
+    let currentPage=startPage;
+
+    while(columns.length){
+      if(!pages[currentPage]) createPage();
+      const page=pages[currentPage];
+      const chunk=columns.splice(0,MAX_COLUMNS);
+
+      // ensure columns exist
+      if(page.columns.length<chunk.length){
+        for(let i=page.columns.length;i<chunk.length;i++) page.columns.push(`Col ${i+1}`);
+      }
+
+      // parse links in first column
+      const rowData=chunk.map(c=>{
+        const parts=c.split('|').map(p=>p.trim());
+        let link=null;
+        if(parts[1]){
+          const m=parts[1].match(/page(\d+):row(\d+)/i);
+          if(m) link={page:parseInt(m[1],10),row:parseInt(m[2],10)};
+        }
+        return {value:parts[0],link};
+      });
+
+      page.rows.push(rowData);
+      currentPage++;
+      if(currentPage>=MAX_PAGES) break;
+    }
+  });
+
+  savePages();
+  showPage(currentPageIndex);
+  document.querySelector('.controls input[placeholder*="Paste"]').value='';
+}
+
+/* ---------------- INIT ---------------- */
+if(pages.length===0) createPage();
+renderTabs();
+showPage(currentPageIndex);
+</script>
+       <script>
+       /* ---------------- RENAME PAGE ---------------- */
+function renamePage(){
+  const page = pages[currentPageIndex];
+  const newName = prompt("Enter new page name:", page.name);
+  if(newName && newName.trim()!==""){
+    page.name = newName.trim();
+    savePages();
+    renderTabs();
+    showPage(currentPageIndex);
+  }
+}
+
+/* ---------------- RENAME COLUMNS ---------------- */
+function renameColumns(){
+  const page = pages[currentPageIndex];
+  page.columns.slice(0, MAX_COLUMNS).forEach((col,i)=>{
+    const newName = prompt(`Rename column ${i+1} (currently: ${col}):`, col);
+    if(newName && newName.trim()!=="") page.columns[i] = newName.trim();
+  });
+  savePages();
+  showPage(currentPageIndex);
+}
+
+/* ---------------- RENAME ROW / CELLS ---------------- */
+function renameRows(){
+  const page = pages[currentPageIndex];
+  const rowIndex = parseInt(prompt(`Enter row number (1-${page.rows.length}) to rename:`),10)-1;
+  if(isNaN(rowIndex) || rowIndex<0 || rowIndex>=page.rows.length) return alert("Invalid row number");
+
+  page.rows[rowIndex].slice(0, MAX_COLUMNS).forEach((cell,i)=>{
+    const newValue = prompt(`Row ${rowIndex+1} Column ${i+1} (current: ${cell.value}):`, cell.value);
+    if(newValue !== null) page.rows[rowIndex][i].value = newValue.trim();
+  });
+
+  savePages();
+  showPage(currentPageIndex);
+}
+       </script>
+       <script>
+       /* ---------------- MERGE SAME-NAME PAGES ---------------- */
+function mergeSameNamePages(){
+  // Collect page names and their indices
+  const nameMap = {};
+  pages.forEach((p, i)=>{
+    if(!nameMap[p.name]) nameMap[p.name] = [];
+    nameMap[p.name].push(i);
+  });
+
+  // Find names with duplicates
+  const duplicates = Object.keys(nameMap).filter(name=>nameMap[name].length > 1);
+  if(duplicates.length === 0) return alert("No duplicate page names found.");
+
+  // Ask user confirmation
+  const confirmMerge = confirm(`Found ${duplicates.length} page(s) with duplicate names: ${duplicates.join(', ')}. Merge duplicates into one page each?`);
+  if(!confirmMerge) return;
+
+  // Merge pages
+  duplicates.forEach(name=>{
+    const indices = nameMap[name].sort((a,b)=>a-b);
+    const targetPage = pages[indices[0]]; // first page becomes main
+    for(let i=1; i<indices.length; i++){
+      const dupPage = pages[indices[i]];
+      // Merge columns (extend if necessary)
+      dupPage.columns.forEach((col,j)=>{
+        if(!targetPage.columns[j]) targetPage.columns[j] = col;
+      });
+      // Merge rows
+      dupPage.rows.forEach(row=>{
+        targetPage.rows.push(row);
+      });
+    }
+    // Remove duplicate pages (from last to first to not break indices)
+    for(let i=indices.length-1; i>0; i--){
+      pages.splice(indices[i],1);
+    }
+  });
+
+  savePages();
+  renderTabs();
+  showPage(0);
+  alert("Duplicate pages merged successfully.");
+}
+       </script>
+</body>
+</html>
