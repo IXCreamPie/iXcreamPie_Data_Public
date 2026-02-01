@@ -1,41 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>IX Public Data</title>
+<title>Public Data Cells</title>
+<style>
+body { font-family: Arial; padding: 20px; }
+.cell {
+  border: 2px solid #000;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+</style>
 </head>
 <body>
 
-<script>
-window.PUBLIC_DATA = {
-  profile: {
-    name: "IX_Cr3@mP!e",
-    photo: "https://web.static.mmcdn.com/images/logo.svg",
-    topButton: {
-      label: "Follow Me",
-      link: "https://www.instagram.com/ix_creampie"
-    },
-    bottomButton: {
-      label: "Live Support",
-      link: "https://chaturbate.com/in/?tour=bfpW"
-    }
-  },
-
-  schedule: [
-    { day: "Monday", time: "17:00", link: "https://chaturbate.com/in/?tour=bfpW" },
-    { day: "Tuesday", time: "18:30", link: "https://chaturbate.com/in/?tour=bfpW" },
-    { day: "Wednesday", time: "22:00", link: "https://chaturbate.com/in/?tour=bfpW" },
-    { day: "Friday", time: "19:00", link: "https://chaturbate.com/in/?tour=bfpW" },
-    { day: "Saturday", time: "21:00", link: "https://chaturbate.com/in/?tour=bfpW" }
-  ]
-};
-</script>
-
-<pre id="out"></pre>
+<h2>Public Data</h2>
+<div id="cells"></div>
 
 <script>
-document.getElementById("out").textContent =
-  JSON.stringify(window.PUBLIC_DATA, null, 2);
+const data = JSON.parse(localStorage.getItem("IX_PUBLIC_DATA"));
+const container = document.getElementById("cells");
+
+if (!data) {
+  container.innerHTML = "No data found.";
+} else {
+  container.innerHTML = `
+    <div class="cell"><b>Name:</b> ${data.name}</div>
+    <div class="cell"><b>Photo:</b> ${data.photo}</div>
+    <div class="cell"><b>Top Button:</b> ${data.topButton}</div>
+    <div class="cell"><b>Bottom Button:</b> ${data.bottomButton}</div>
+    ${data.schedule.map((s,i)=>`
+      <div class="cell"><b>Slot ${i+1}:</b> ${s}</div>
+    `).join("")}
+  `;
+}
 </script>
 
 </body>
